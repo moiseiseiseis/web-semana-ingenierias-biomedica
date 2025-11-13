@@ -160,6 +160,40 @@ def setup_admin():
     else:
         return "Admin ya existía."
 
+@bp.route("/setup-admin")
+def setup_admin():
+    """
+    Crea o actualiza la cuenta admin en PRODUCCIÓN.
+    Protegido con ADMIN_SETUP_TOKEN (querystring ?token=...).
+    """
+    token = request.args.get("token")
+    expected = os.getenv("ADMIN_SETUP_TOKEN")
+
+    if not expected or token != expected:
+        # No revelamos mucho detalle para no regalar el endpoint
+        return "No autorizado", 403
+
+    # Buscar admin por correo
+    admin = User.query.filter_by(email="admin@institucion.edu").first()
+
+    if not admin:
+        admin = User(
+            nombre="Admin",
+            email="admin@institucion.edu",
+            role="admin"
+        )
+        admin.set_password("admin123")  # contraseña en producción
+        db.session.add(admin)
+        msg = "✔ Admin creado."
+    else:
+        # Aseguramos que siga siendo admin y reseteamos password
+        admin.role = "admin"
+        admin.set_password("admin123")
+        msg = "✔ Admin actualizado (password reseteado)."
+
+    db.session.commit()
+    return msg, 200
+
 
 @bp.route("/seed-eventos")
 def seed_eventos():
