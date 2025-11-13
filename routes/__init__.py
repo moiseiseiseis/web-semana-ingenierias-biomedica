@@ -4,6 +4,7 @@ from .registro_wizard import bp as registro_wizard_bp   # ✅ nuevo registro uni
 from .alumnos_dashboard import bp as alumnos_bp
 from .academicos import bp as academicos_bp
 from .admin import bp as admin_bp
+from .admin_setup import bp as admin_setup_bp
 
 def register_blueprints(app):
     app.register_blueprint(main_bp)
@@ -16,6 +17,7 @@ def register_blueprints(app):
     app.register_blueprint(alumnos_bp)
     app.register_blueprint(academicos_bp, url_prefix="/academicos")
     app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(admin_setup_bp)
 
     # 🔁 (Opcional) Alias de compatibilidad si aún tienes enlaces viejos:
     # from flask import redirect, url_for
