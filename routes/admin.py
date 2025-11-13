@@ -1,5 +1,6 @@
 # routes/admin.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app
+import os
 from flask_login import login_user, logout_user, login_required, current_user
 from forms.login_form import LoginForm
 from models import db
@@ -9,7 +10,121 @@ from models.evaluacion import Evaluacion
 from utils.decorators import role_required
 from utils.export_pdf import render_pdf
 
+
+
 bp = Blueprint("admin", __name__)
+from datetime import date, time
+from models.evento import Evento
+
+
+@bp.route("/init-admin")
+def init_admin():
+    """
+    Inicializa o resetea el usuario admin en la BD actual (Render).
+    PROTEGER con token en query: /admin/init-admin?token=TU_TOKEN
+    """
+    token = request.args.get("token")
+    expected = os.getenv("ADMIN_SETUP_TOKEN")
+
+    if not expected or token != expected:
+        # No revelamos nada, solo 403
+        return "Forbidden", 403
+
+    from models.user import User
+    from models import db
+
+    email = "admin@institucion.edu"
+    password = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123")
+
+    admin = User.query.filter_by(email=email, role="admin").first()
+    if not admin:
+        admin = User(nombre="Admin", email=email, role="admin")
+        admin.set_password(password)
+        db.session.add(admin)
+        msg = "Admin creado"
+    else:
+        admin.set_password(password)
+        msg = "Password de admin actualizada"
+
+    db.session.commit()
+    return f"{msg} correctamente para {email}.", 200
+
+
+@bp.route("/seed-eventos")
+def seed_eventos():
+    """
+    Crea los eventos del programa en la BD actual (Render).
+    Proteger con token: /admin/seed-eventos?token=TU_TOKEN
+    """
+    token = request.args.get("token")
+    expected = os.getenv("ADMIN_SETUP_TOKEN")  # reutilizamos el mismo token del init-admin
+
+    if not expected or token != expected:
+        return "Forbidden", 403
+
+    from models import db
+
+    data = [
+        # OJO: usa exactamente los eventos del flyer
+        {
+            "slug": "apertura-semana-biomedica",
+            "titulo": "Ceremonia de Apertura",
+            "descripcion_corta": "Inicio de actividades y mensaje de bienvenida.",
+            "tipo": "Ceremonia",
+            "ponente_nombre": "Comité Académico",
+            "ponente_afiliacion": "CUCEI",
+            "fecha": date(2025, 11, 18),
+            "hora_inicio": time(9, 0),
+            "hora_fin": time(9, 30),
+            "lugar": "Auditorio Principal",
+            "imagen": None,
+            "published": True,
+        },
+        {
+            "slug": "taller-senales-biomedicas",
+            "titulo": "Taller: Procesamiento de Señales Biomédicas",
+            "descripcion_corta": "Pipeline de filtros, features y visualización.",
+            "tipo": "Taller",
+            "ponente_nombre": "Dra. A. Martínez",
+            "ponente_afiliacion": "Laboratorio de Neuroingeniería",
+            "fecha": date(2025, 11, 18),
+            "hora_inicio": time(10, 0),
+            "hora_fin": time(12, 0),
+            "lugar": "Lab 2",
+            "imagen": None,
+            "published": True,
+        },
+        {
+            "slug": "conferencia-innovacion-protesis",
+            "titulo": "Conferencia: Innovación en Prótesis Inteligentes",
+            "descripcion_corta": "Tendencias en sensores y control.",
+            "tipo": "Conferencia",
+            "ponente_nombre": "M. García",
+            "ponente_afiliacion": "SEVID",
+            "fecha": date(2025, 11, 19),
+            "hora_inicio": time(11, 0),
+            "hora_fin": time(12, 0),
+            "lugar": "Aula Magna",
+            "imagen": None,
+            "published": True,
+        },
+        # Aquí agrega el resto del programa EXACTO del flyer
+        # ...
+    ]
+
+    creados = 0
+    for d in data:
+        existing = Evento.query.filter_by(slug=d["slug"]).first()
+        if existing:
+            continue
+        ev = Evento(**d)
+        db.session.add(ev)
+        creados += 1
+
+    db.session.commit()
+    return f"Eventos sembrados: {creados}", 200
+
+
 
 # -------------------- Auth --------------------
 @bp.route("/login", methods=["GET", "POST"])
