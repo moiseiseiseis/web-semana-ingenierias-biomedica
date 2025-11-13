@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Académico{% endblock %}
+{% block content %}
+
+<h1 class="text-2xl font-bold mb-8 text-gray-800">Dashboard Académico</h1>
+
+<!-- ===== ASIGNAR EQUIPOS ===== -->
+<div class="card mb-10 shadow-md">
+  <div class="card-pad space-y-4">
+    <h2 class="text-xl font-semibold text-gray-800">Asignar equipos a evaluar</h2>
+    <p class="text-sm text-gray-600">
+      Pega las claves (una por línea). Ejemplo:
+    </p>
+    <pre class="text-sm bg-gray-50 border border-gray-200 rounded p-3 mb-4">{{ ejemplo }}</pre>
+
+    <form method="post" action="{{ url_for('academicos.asignar') }}" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea
+        name="claves"
+        rows="6"
+        class="field-input w-full resize-y rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500"
+        placeholder="INBI5-01&#10;INBI7-02"></textarea>
+      <button class="btn btn-primary w-full sm:w-auto px-6 py-2">Asignar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== PENDIENTES ===== -->
+<section class="space-y-4 mb-10">
+  <h2 class="text-xl font-semibold text-gray-800 mb-4">Pendientes</h2>
+  <div class="card shadow-sm">
+    <div class="card-pad overflow-x-auto">
+      <table class="min-w-full border-separate border-spacing-y-2 text-sm">
+        <thead class="bg-gray-100 text-gray-700 uppercase text-xs tracking-wider">
+          <tr>
+            <th class="px-4 py-2 text-left">Clave</th>
+            <th class="px-4 py-2 text-left">Nombre</th>
+            <th class="px-4 py-2 text-left">Tipo</th>
+            <th class="px-4 py-2 text-left">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in pendientes %}
+          <tr class="bg-white hover:bg-gray-50 shadow-sm rounded">
+            <td class="px-4 py-3 font-medium text-gray-800">{{ e.clave_equipo }}</td>
+            <td class="px-4 py-3">{{ e.nombre_cartel }}</td>
+            <td class="px-4 py-3 text-gray-700">{{ e.tipo_evaluacion }}</td>
+            <td class="px-4 py-3 flex flex-wrap gap-2">
+              <a href="{{ url_for('academicos.evaluar', equipo_id=e.id) }}"
+                 class="btn btn-ghost text-blue-700 hover:text-blue-900">Evaluar</a>
+
+              <form method="post"
+                    action="{{ url_for('academicos.eliminar_asignacion', equipo_id=e.id) }}"
+                    onsubmit="return confirm('¿Eliminar asignación?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-ghost text-red-600 hover:text-red-800">Quitar</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="px-4 py-4 text-gray-500 italic text-center">No hay equipos pendientes.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CALIFICADOS ===== -->
+<section class="space-y-4 mb-10">
+  <h2 class="text-xl font-semibold text-gray-800 mb-4">Calificados</h2>
+  <div class="card shadow-sm">
+    <div class="card-pad overflow-x-auto">
+      <table class="min-w-full border-separate border-spacing-y-2 text-sm">
+        <thead class="bg-gray-100 text-gray-700 uppercase text-xs tracking-wider">
+          <tr>
+            <th class="px-4 py-2 text-left">Clave</th>
+            <th class="px-4 py-2 text-left">Nombre</th>
+            <th class="px-4 py-2 text-left">Tipo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in calificados %}
+          <tr class="bg-white hover:bg-gray-50 shadow-sm rounded">
+            <td class="px-4 py-3 font-medium text-gray-800">{{ e.clave_equipo }}</td>
+            <td class="px-4 py-3">{{ e.nombre_cartel }}</td>
+            <td class="px-4 py-3 text-gray-700">{{ e.tipo_evaluacion }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="px-4 py-4 text-gray-500 italic text-center">Aún no has calificado equipos.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

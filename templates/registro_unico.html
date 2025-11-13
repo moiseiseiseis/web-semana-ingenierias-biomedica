@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo or "Registro" }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl">
+  <div class="card">
+    <div class="card-pad">
+      <h1 class="text-xl font-semibold mb-2">{{ titulo or "Registro" }}</h1>
+      <p class="text-sm text-gray-600 mb-4">Selecciona el tipo de registro y completa los campos.</p>
+
+      <form method="post" class="space-y-5" x-data="{modo: '{{ form.modo.data or 'alumno' }}'}">
+        {{ form.hidden_tag() }}
+
+        <!-- Selector -->
+        <div class="flex flex-wrap gap-2">
+          <label class="btn btn-ghost">
+            {{ form.modo(class="hidden", value="alumno", onchange="document.getElementById('modo').value='alumno'") }}
+            <input type="radio" name="modo" value="alumno" id="r-alumno"
+                   onclick="switchMode('alumno')" {% if (form.modo.data or 'alumno')=='alumno' %}checked{% endif %}>
+            <span class="ml-2">Alumno/a</span>
+          </label>
+          <label class="btn btn-ghost">
+            <input type="radio" name="modo" value="academico" id="r-academico"
+                   onclick="switchMode('academico')" {% if form.modo.data=='academico' %}checked{% endif %}>
+            <span class="ml-2">Académico/a</span>
+          </label>
+          <label class="btn btn-ghost">
+            <input type="radio" name="modo" value="equipo" id="r-equipo"
+                   onclick="switchMode('equipo')" {% if form.modo.data=='equipo' %}checked{% endif %}>
+            <span class="ml-2">Equipo</span>
+          </label>
+        </div>
+
+        <!-- Alumno -->
+        <div id="box-alumno" class="grid gap-4">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">Nombre completo</label>
+              {{ form.nombre(class="field-input") }}
+            </div>
+            <div>
+              <label class="field-label">Correo</label>
+              {{ form.email(class="field-input", type="email") }}
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Código de estudiante</label>
+            {{ form.student_code(class="field-input") }}
+          </div>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">Contraseña</label>
+              {{ form.password(class="field-input", type="password") }}
+            </div>
+            <div>
+              <label class="field-label">Confirmar contraseña</label>
+              {{ form.password2(class="field-input", type="password") }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Académico -->
+        <div id="box-academico" class="grid gap-4 hidden">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">Nombre completo</label>
+              {{ form.nombre(class="field-input") }}
+            </div>
+            <div>
+              <label class="field-label">Correo (@academicos.udg.mx)</label>
+              {{ form.email(class="field-input", type="email", placeholder="tu.usuario@academicos.udg.mx") }}
+            </div>
+          </div>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">Contraseña</label>
+              {{ form.password(class="field-input", type="password") }}
+            </div>
+            <div>
+              <label class="field-label">Confirmar contraseña</label>
+              {{ form.password2(class="field-input", type="password") }}
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Claves a evaluar (opcional)</label>
+            {{ form.claves(class="field-input", rows="4", placeholder="G7-001\nG5-003") }}
+          </div>
+        </div>
+
+        <!-- Equipo -->
+        <div id="box-equipo" class="grid gap-4 hidden">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">Grado (1,3,5,7,9)</label>
+              {{ form.grado(class="field-input", type="number") }}
+            </div>
+            <div>
+              <label class="field-label">Nombre del Cartel / Proyecto</label>
+              {{ form.nombre_cartel(class="field-input") }}
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Códigos de estudiante (uno por línea)</label>
+            {{ form.integrantes_codigos(class="field-input", rows="6", placeholder="A12345\nB98765") }}
+          </div>
+          <p class="text-xs text-gray-600">La clave del equipo se generará automáticamente (p.ej. G7-001).</p>
+        </div>
+
+        <div>
+          {{ form.submit(class="btn btn-primary") }}
+          <a href="{{ url_for('main.home') }}" class="btn btn-ghost ml-2">Cancelar</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function show(id, yes) { const el = document.getElementById(id); if (!el) return; el.classList.toggle('hidden', !yes); }
+  function switchMode(mode) {
+    show('box-alumno', mode === 'alumno');
+    show('box-academico', mode === 'academico');
+    show('box-equipo', mode === 'equipo');
+    const select = document.querySelector('select[name="modo"]'); if (select) select.value = mode;
+  }
+  // estado inicial
+  (function(){
+    const checked = document.querySelector('input[name="modo"]:checked');
+    switchMode(checked ? checked.value : 'alumno');
+  })();
+</script>
+{% endblock %}

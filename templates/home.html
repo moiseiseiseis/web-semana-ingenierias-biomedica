@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Inicio · Semana de Ingenierías{% endblock %}
+{% block content %}
+
+{# ===================== HERO A TODO LO ANCHO ===================== #}
+<section class="relative rounded-xl overflow-hidden shadow-soft border border-gray-100">
+  <video
+    id="heroVideo"
+    class="w-full h-[44vh] md:h-[60vh] object-cover"
+    autoplay muted loop playsinline
+    poster="{{ url_for('static', filename='img/hero_poster.jpg') }}"
+  >
+    <source src="{{ url_for('static', filename='video/hero.webm') }}" type="video/webm">
+    <source src="{{ url_for('static', filename='video/hero.mp4') }}" type="video/mp4">
+    Tu navegador no soporta video HTML5.
+  </video>
+
+  <div class="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/20"></div>
+
+  <div class="absolute inset-0 p-6 md:p-10 flex flex-col justify-end">
+    <h1 class="text-white text-2xl md:text-4xl font-bold leading-tight drop-shadow">
+    Ingeniería Biomédica
+    </h1>
+    <p class="mt-2 md:mt-3 text-sm md:text-base text-white/90 max-w-3xl">
+      Conferencias, talleres y presentaciones
+    </p>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <a href="{{ url_for('registro_wizard.registro') }}"
+         class="inline-flex items-center gap-2 rounded-full bg-accent-gold text-black font-semibold px-4 py-2 hover:brightness-95 transition">
+        Registrarme
+      </a>
+      <a href="{{ url_for('main.tutorial') }}"
+         class="inline-flex items-center gap-2 rounded-full bg-white/90 text-gray-900 px-4 py-2 hover:bg-white transition">
+        Tutorial
+      </a>
+      <button id="heroToggle"
+              class="text-xs text-white/80 underline decoration-white/40 hover:text-white">
+        
+      </button>
+    </div>
+  </div>
+</section>
+
+{# ===================== GRID BAJO EL HERO ===================== #}
+<section class="mt-6 grid gap-6 md:grid-cols-3">
+
+  {# ---- COLUMNA IZQUIERDA (2/3): PROGRAMA ---- #}
+  <div class="md:col-span-2">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold">Programa</h2>
+    </div>
+
+{% if eventos %}
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+    {% for ev in eventos %}
+      <article class="overflow-hidden flex flex-col rounded-xl border border-accent-gold/40 bg-white/95 backdrop-blur-sm shadow-soft hover:shadow-glow transition-transform duration-300">
+        {% if ev.imagen %}
+          <img src="{{ url_for('static', filename=ev.imagen) }}"
+               alt="{{ ev.titulo }}"
+               class="h-40 w-full object-cover border-b border-accent-gold/30">
+        {% endif %}
+
+        <div class="p-5 flex flex-col gap-2 flex-1">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs uppercase tracking-wide text-accent-gold font-semibold">
+              {{ ev.tipo }}
+            </span>
+            <span class="text-xs font-medium text-gray-500">
+              {{ ev.fecha.strftime("%d/%m/%Y") }}
+            </span>
+          </div>
+
+          <h3 class="font-semibold text-gray-900 leading-snug text-base">
+            {{ ev.titulo }}
+          </h3>
+
+          {% if ev.ponente_nombre %}
+            <div class="text-sm text-gray-700 italic">
+              {{ ev.ponente_nombre }}{% if ev.ponente_afiliacion %} · {{ ev.ponente_afiliacion }}{% endif %}
+            </div>
+          {% endif %}
+
+          {% if ev.descripcion_corta %}
+            <p class="text-sm text-gray-600 mt-1">{{ ev.descripcion_corta }}</p>
+          {% endif %}
+
+          <div class="mt-auto pt-3 text-sm text-gray-700 border-t border-gray-100">
+            <div><strong>Horario:</strong> {{ ev.horario_str() }}</div>
+            {% if ev.lugar %}
+              <div><strong>Lugar:</strong> {{ ev.lugar }}</div>
+            {% endif %}
+          </div>
+
+          <div class="pt-3">
+            <a href="{{ url_for('main.evento_detalle', slug=ev.slug) }}"
+               class="inline-block rounded-lg px-4 py-2 text-sm font-medium bg-accent-gold text-gray-900 hover:bg-accent-gold/80 transition-colors duration-200">
+              Ver detalles
+            </a>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-pad text-sm text-gray-600">
+      Aún no hay eventos publicados.
+    </div>
+  </div>
+{% endif %}
+
+  </div>
+
+  {# ---- COLUMNA DERECHA (1/3): RAIL / ANUNCIO ---- #}
+  <aside class="md:col-span-1">
+    <div class="md:sticky md:top-6 space-y-4">
+
+      {# Logo 1 #}
+      <div class="card">
+        <div class="card-pad flex items-center justify-center">
+          <img src="{{ url_for('static', filename='img/logo_cu.png') }}"
+               alt="Logo CU" class="h-78 md:h-80 w-auto max-w-[520px] object-contain">
+        </div>
+      </div>
+
+      {# Logo 2 #}
+      <div class="card">
+        <div class="card-pad flex items-center justify-center">
+          <img src="{{ url_for('static', filename='img/logo_si.png') }}"
+               alt="Logo SI" class="h-78 md:h-80 w-auto max-w-[520px] object-contain">
+        </div>
+      </div>
+
+      {# Ubicación #}
+      <div class="card">
+        <div class="card-pad">
+          <div class="text-xs tracking-wide text-gray-500 uppercase">Ubicación</div>
+          <div class="mt-1">
+            <div class="font-semibold">{{ side.ubicacion.sede }}</div>
+            <div class="text-gray-600">{{ side.ubicacion.direccion }}</div>
+            <div class="text-gray-600">{{ side.ubicacion.fechas }}</div>
+            <a href="{{ side.ubicacion.maps_url }}" target="_blank" rel="noopener" class="link text-sm">Ver mapa</a>
+          </div>
+        </div>
+      </div>
+
+      {# Cómo registrarse #}
+      <div class="card">
+        <div class="card-pad">
+          <div class="text-xs tracking-wide text-gray-500 uppercase">Cómo registrarse</div>
+          <ol class="mt-2 space-y-2 text-sm text-gray-700">
+            {% for p in side.pasos %}
+              <li>
+                <span class="inline-flex items-center justify-center h-5 w-5 rounded-full bg-accent-gold text-black text-xs font-bold mr-2">{{ p.n }}</span>
+                <span class="font-medium">{{ p.t }}</span>
+                <span class="text-gray-600">— {{ p.d }}</span>
+              </li>
+            {% endfor %}
+          </ol>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+</section>
+
+<script>
+  const v = document.getElementById('heroVideo');
+  const t = document.getElementById('heroToggle');
+  if (v && t) t.addEventListener('click', () => v.paused ? v.play() : v.pause());
+</script>
+
+{% endblock %}

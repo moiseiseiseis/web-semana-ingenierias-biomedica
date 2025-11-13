@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Admin{% endblock %}
+{% block content %}
+
+<h1 class="text-2xl font-semibold tracking-tight mb-2">Dashboard Admin</h1>
+<p class="mb-6 text-sm text-gray-600">
+  <a class="text-brand-700 hover:text-brand-800 underline" href="{{ url_for('admin.logout') }}">Cerrar sesión</a>
+</p>
+
+{# ---- RESUMEN RÁPIDO (más aire y jerarquía) ---- #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+  <div class="card">
+    <div class="card-pad !p-6 md:!p-8">
+      <div class="text-xs uppercase text-gray-500">Equipos (totales)</div>
+      <div class="mt-1 text-3xl font-bold leading-none">{{ resumen.equipos_total }}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-pad !p-6 md:!p-8">
+      <div class="text-xs uppercase text-gray-500">Equipos calificados</div>
+      <div class="mt-1 text-3xl font-bold leading-none">{{ resumen.equipos_calificados }}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-pad !p-6 md:!p-8">
+      <div class="text-xs uppercase text-gray-500">Académicos</div>
+      <div class="mt-1 text-3xl font-bold leading-none">{{ resumen.academicos_total }}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-pad !p-6 md:!p-8">
+      <div class="text-xs uppercase text-gray-500">Alumnos</div>
+      <div class="mt-1 text-3xl font-bold leading-none">{{ resumen.alumnos_total }}</div>
+    </div>
+  </div>
+</div>
+
+{# ---- FILTRO POR GRADO + EXPORTAR (más grande y espaciado) ---- #}
+<div class="card mb-8">
+  <div class="card-pad !p-5 md:!p-6 flex flex-wrap items-center gap-4">
+    <form class="flex flex-wrap items-center gap-3" method="get">
+      <label class="text-sm font-medium">Filtrar por grado:</label>
+      <select name="grado" class="field-input !h-10 !px-3 !py-2 !w-36">
+        <option value="">Todos</option>
+        {% for g in [1,3,5,7,9] %}
+          <option value="{{ g }}" {% if grado==g %}selected{% endif %}>{{ g }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-secondary !h-10">Aplicar</button>
+      {% if request.args.get('grado') %}
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost !h-10">Limpiar</a>
+      {% endif %}
+    </form>
+
+    <div class="ml-auto">
+      {% if puede_exportar %}
+        <a href="{{ url_for('admin.exportar', grado=grado) }}" class="btn btn-primary !h-10">Exportar PDF</a>
+      {% else %}
+        <button class="btn btn-ghost !h-10 cursor-not-allowed" title="Exportación disponible cuando todos los equipos estén calificados" disabled>
+          Exportar PDF
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ---- NAVEGACIÓN DE SECCIONES ---- #}
+<nav class="flex flex-wrap items-center gap-3 text-sm mb-5">
+  <a href="#tab-equipos" class="pill bg-brand-50 text-brand-800">Equipos</a>
+  <a href="#tab-academicos" class="pill bg-brand-50 text-brand-800">Académicos</a>
+  <a href="#tab-alumnos" class="pill bg-brand-50 text-brand-800">Alumnos</a>
+</nav>
+
+{# ==== TAB: EQUIPOS ==== #}
+<a id="tab-equipos"></a>
+<section class="card mb-8">
+  <div class="card-pad !p-6 md:!p-8">
+    <header class="mb-4">
+      <h2 class="text-lg font-semibold">Equipos {% if grado %}(Grado {{ grado }}){% endif %}</h2>
+      <p class="text-sm text-gray-600 mt-1">Listado ordenado por grado y nombre. Pasa el mouse para resaltar filas.</p>
+    </header>
+
+    <div class="overflow-auto">
+      <table class="min-w-full text-sm md:text-base table-auto border-collapse">
+        <thead class="bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <tr>
+            <th class="px-4 py-3">Grado</th>
+            <th class="px-4 py-3">Clave</th>
+            <th class="px-4 py-3">Nombre</th>
+            <th class="px-4 py-3">Tipo</th>
+            <th class="px-4 py-3">Estado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          {% for e in equipos %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3">{{ e.grado }}</td>
+              <td class="px-4 py-3 font-medium">{{ e.clave_equipo }}</td>
+              <td class="px-4 py-3">{{ e.nombre_cartel }}</td>
+              <td class="px-4 py-3">{{ e.tipo_evaluacion }}</td>
+              <td class="px-4 py-3">{{ e.estado }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td class="px-4 py-6 text-gray-500 italic" colspan="5">Sin equipos.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+{# ==== TAB: ACADÉMICOS ==== #}
+<a id="tab-academicos"></a>
+<section class="card mb-8">
+  <div class="card-pad !p-6 md:!p-8">
+    <header class="mb-4">
+      <h2 class="text-lg font-semibold">Académicos</h2>
+      <p class="text-sm text-gray-600 mt-1">Resumen de cuentas y avance de evaluaciones.</p>
+    </header>
+
+    <div class="overflow-auto">
+      <table class="min-w-full text-sm md:text-base table-auto border-collapse">
+        <thead class="bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <tr>
+            <th class="px-4 py-3">Nombre</th>
+            <th class="px-4 py-3">Correo</th>
+            <th class="px-4 py-3">Asignados</th>
+            <th class="px-4 py-3">Calificados</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          {% for a in academicos %}
+            {% set asignados = a.asignaciones|length if a.asignaciones is defined else 0 %}
+            {% set califs = 0 %}
+            {% if a.evaluaciones is defined and a.evaluaciones %}
+              {% for ev in a.evaluaciones %}
+                {% if ev.calificacion is not none %}
+                  {% set califs = califs + 1 %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 font-medium">{{ a.nombre }}</td>
+              <td class="px-4 py-3">{{ a.email }}</td>
+              <td class="px-4 py-3">{{ asignados }}</td>
+              <td class="px-4 py-3">{{ califs }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td class="px-4 py-6 text-gray-500 italic" colspan="4">Sin académicos registrados.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+{# ==== TAB: ALUMNOS ==== #}
+<a id="tab-alumnos"></a>
+<section class="card">
+  <div class="card-pad !p-6 md:!p-8">
+    <header class="mb-4">
+      <h2 class="text-lg font-semibold">Alumnos</h2>
+      <p class="text-sm text-gray-600 mt-1">Listado de alumnos registrados.</p>
+    </header>
+
+    <div class="overflow-auto">
+      <table class="min-w-full text-sm md:text-base table-auto border-collapse">
+        <thead class="bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <tr>
+            <th class="px-4 py-3">Nombre</th>
+            <th class="px-4 py-3">Correo</th>
+            <th class="px-4 py-3">Código</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          {% for al in alumnos %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 font-medium">{{ al.nombre }}</td>
+              <td class="px-4 py-3">{{ al.email }}</td>
+              <td class="px-4 py-3">{{ al.student_code or "-" }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td class="px-4 py-6 text-gray-500 italic" colspan="3">Sin alumnos registrados.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

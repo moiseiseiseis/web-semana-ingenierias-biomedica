@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Registro de Equipo{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Registro de Equipo</h1>
+<form method="post" class="bg-white p-4 rounded shadow max-w-2xl">
+  {{ form.hidden_tag() }}
+  <label class="block mb-2">Clave de Equipo</label>
+  {{ form.clave_equipo(class="w-full border rounded p-2 mb-4") }}
+
+  <label class="block mb-2">Grado (1,3,5,7,9)</label>
+  {{ form.grado(class="w-full border rounded p-2 mb-4") }}
+
+  <label class="block mb-2">Integrantes</label>
+  {{ form.integrantes(class="w-full border rounded p-2 mb-4", rows="4") }}
+
+  <label class="block mb-2">Nombre del Cartel / Proyecto</label>
+  {{ form.nombre_cartel(class="w-full border rounded p-2 mb-4") }}
+
+  <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Registrar</button>
+</form>
+<p class="text-sm text-gray-600 mt-4">
+  Nota: Si el grado es 7 o 9 se considera <b>Proyecto Modular</b>; en otros grados se considera <b>Cartel</b>.
+</p>
+{% endblock %}

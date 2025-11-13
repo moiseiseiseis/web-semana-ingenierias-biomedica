@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Tutorial · Registro y Uso{% endblock %}
+{% block content %}
+
+<div class="grid gap-6 md:grid-cols-3">
+  <div class="md:col-span-2">
+    <div class="card">
+      <div class="card-pad">
+        <h1 class="text-xl font-semibold">Tutorial</h1>
+        <p class="text-sm text-gray-700 mt-1">Cómo registrarse, iniciar sesión y usar el panel según tu rol.</p>
+
+        <ol class="mt-4 space-y-3 text-sm text-gray-800">
+          <li>
+            <strong>1) Registro:</strong> entra a <em>Registro</em>, elige si eres alumno, académico o equipo y completa el formulario.
+          </li>
+          <li>
+            <strong>2) Confirmación:</strong> verás un mensaje de éxito; luego inicia sesión desde <em>Login</em>.
+          </li>
+          <li>
+            <strong>3) Panel:</strong> 
+            alumnos ven calificaciones/equipos; académicos, sus asignaciones de evaluación.
+          </li>
+          <li>
+            <strong>4) Programa:</strong> vuelve a <em>Home</em> para explorar el grid de eventos, ver detalle, horarios y lugar.
+          </li>
+        </ol>
+
+        <div class="mt-4">
+          <a href="{{ url_for('registro_wizard.registro') }}" class="btn btn-primary">Ir a Registro</a>
+          <a href="{{ url_for('auth.login_general') }}" class="btn btn-ghost ml-2">Ir a Login</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="space-y-4">
+    <div class="card"><div class="card-pad">
+      <h3 class="font-semibold">Requisitos</h3>
+      <ul class="mt-2 text-sm text-gray-700 list-disc pl-5">
+        <li>Correo institucional (académicos: @academicos.udg.mx).</li>
+        <li>Código de estudiante (alumnos).</li>
+        <li></li>
+      </ul>
+    </div></div>
+    <div class="card"><div class="card-pad">
+      <h3 class="font-semibold">Soporte</h3>
+      <p class="text-sm text-gray-700">Dudas: biomedtech98@gmail.com</p>
+    </div></div>
+  </aside>
+</div>
+
+{% endblock %}

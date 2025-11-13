@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 12px; }
+    h1 { font-size: 18px; margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #333; padding: 6px; text-align: left; }
+    thead { background: #eee; }
+  </style>
+</head>
+<body>
+  <h1>Resultados — Semana de Ingenierías</h1>
+  {% if grado %}<p><b>Grado:</b> {{ grado }}</p>{% endif %}
+  <table>
+    <thead>
+      <tr>
+        <th>Grado</th>
+        <th>Clave</th>
+        <th>Nombre</th>
+        <th>Tipo</th>
+        <th>Calificación</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in datos %}
+      <tr>
+        <td>{{ r.grado }}</td>
+        <td>{{ r.clave_equipo }}</td>
+        <td>{{ r.nombre_cartel }}</td>
+        <td>{{ r.tipo }}</td>
+        <td>{{ r.calificacion }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

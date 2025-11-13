@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo or "Registro de Equipo" }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl card">
+  <div class="card-pad">
+    <h1 class="text-xl font-semibold mb-2">{{ titulo or "Registro de Equipo" }}</h1>
+    <form method="post" class="grid gap-4">
+      {{ form.hidden_tag() }}
+      <div>
+        <label class="field-label">Grado (1,3,5,7,9)</label>
+        {{ form.grado(class="field-input", type="number") }}
+      </div>
+      <div>
+        <label class="field-label">Nombre del Cartel / Proyecto</label>
+        {{ form.nombre_cartel(class="field-input") }}
+      </div>
+      <div>
+        <label class="field-label">Códigos de estudiante (uno por línea)</label>
+        {{ form.integrantes_codigos(class="field-input", rows="6", placeholder="A12345\nB98765") }}
+      </div>
+      <div>
+        {{ form.submit(class="btn btn-primary") }}
+        <a href="{{ url_for('main.home') }}" class="btn btn-ghost ml-2">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

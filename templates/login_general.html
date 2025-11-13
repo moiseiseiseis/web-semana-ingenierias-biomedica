@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo or "Login" }}{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto card">
+  <div class="card-pad">
+    <h1 class="text-xl font-semibold mb-2">{{ titulo or "Login" }}</h1>
+    <form method="post" class="space-y-4">
+      {{ form.hidden_tag() }}
+      <div>
+        <label class="field-label">Correo</label>
+        {{ form.email(class="field-input", type="email") }}
+      </div>
+      <div>
+        <label class="field-label">Contraseña</label>
+        {{ form.password(class="field-input", type="password") }}
+      </div>
+      <div>
+        {{ form.submit(class="btn btn-primary") }}
+        <a href="{{ url_for('registro_wizard.registro') }}" class="btn btn-ghost ml-2">Crear cuenta</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

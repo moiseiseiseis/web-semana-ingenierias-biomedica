@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo or "Registro Alumno" }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl card">
+  <div class="card-pad">
+    <h1 class="text-xl font-semibold mb-2">{{ titulo or "Registro Alumno" }}</h1>
+    <form method="post" class="grid gap-4">
+      {{ form.hidden_tag() }}
+      <div>
+        <label class="field-label">Nombre completo</label>
+        {{ form.nombre(class="field-input") }}
+      </div>
+      <div>
+        <label class="field-label">Correo</label>
+        {{ form.email(class="field-input", type="email") }}
+      </div>
+      <div>
+        <label class="field-label">Código de estudiante</label>
+        {{ form.student_code(class="field-input") }}
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="field-label">Contraseña</label>
+          {{ form.password(class="field-input", type="password") }}
+        </div>
+        <div>
+          <label class="field-label">Confirmar contraseña</label>
+          {{ form.password2(class="field-input", type="password") }}
+        </div>
+      </div>
+      <div>
+        {{ form.submit(class="btn btn-primary") }}
+        <a href="{{ url_for('main.home') }}" class="btn btn-ghost ml-2">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

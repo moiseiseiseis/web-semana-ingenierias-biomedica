@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo or "Registro de Académico" }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">{{ titulo or "Registro de Académico" }}</h1>
+
+<form method="post" class="bg-white p-4 rounded shadow max-w-2xl">
+  {{ form.hidden_tag() }}
+
+  <label class="block mb-2">Nombre completo</label>
+  {{ form.nombre(class="w-full border rounded p-2 mb-4") }}
+
+  <label class="block mb-2">Correo institucional (debe terminar en @academicos.udg.mx)</label>
+  {{ form.email(class="w-full border rounded p-2 mb-1") }}
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block mb-2">Contraseña</label>
+      {{ form.password(class="w-full border rounded p-2 mb-4") }}
+    </div>
+    <div>
+      <label class="block mb-2">Confirmar contraseña</label>
+      {{ form.password2(class="w-full border rounded p-2 mb-4") }}
+    </div>
+  </div>
+
+  <label class="block mb-2">Claves de Equipo a evaluar (una por línea)</label>
+  {{ form.claves(class="w-full border rounded p-2 mb-4", rows="6", placeholder="EQ-001\nEQ-015\nEQ-123") }}
+
+  {{ form.submit(class="px-4 py-2 bg-blue-600 text-white rounded") }}
+</form>
+
+<p class="text-sm text-gray-600 mt-4">
+  ¿Ya tienes cuenta? <a class="text-blue-600 underline" href="{{ url_for('academicos.login') }}">Inicia sesión aquí</a>.
+</p>
+{% endblock %}
