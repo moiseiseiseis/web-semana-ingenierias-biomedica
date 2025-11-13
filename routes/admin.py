@@ -1,7 +1,18 @@
 # routes/admin.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, abort
-from flask_login import login_user, logout_user, login_required, current_user
+import os
 from datetime import date, time
+
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    send_file,
+    abort,
+)
+from flask_login import login_user, logout_user, login_required, current_user
 
 from forms.login_form import LoginForm
 from models import db
@@ -99,7 +110,11 @@ def exportar():
     grado = request.args.get("grado", type=int)
 
     query = db.session.query(
-        Equipo.id, Equipo.clave_equipo, Equipo.grado, Equipo.nombre_cartel, Equipo.tipo_evaluacion
+        Equipo.id,
+        Equipo.clave_equipo,
+        Equipo.grado,
+        Equipo.nombre_cartel,
+        Equipo.tipo_evaluacion,
     )
 
     if grado:
@@ -109,19 +124,29 @@ def exportar():
 
     datos = []
     for e in equipos:
-        evs = db.session.query(Evaluacion).filter(Evaluacion.equipo_id == e.id).all()
-        mejor = max([ev.calificacion for ev in evs if ev.calificacion is not None], default=None)
-        datos.append({
-            "grado": e.grado,
-            "clave_equipo": e.clave_equipo,
-            "nombre_cartel": e.nombre_cartel,
-            "tipo": e.tipo_evaluacion,
-            "calificacion": mejor if mejor is not None else "-",
-        })
+        evs = db.session.query(Evaluacion).filter(
+            Evaluacion.equipo_id == e.id
+        ).all()
+        mejor = max(
+            [ev.calificacion for ev in evs if ev.calificacion is not None],
+            default=None,
+        )
+        datos.append(
+            {
+                "grado": e.grado,
+                "clave_equipo": e.clave_equipo,
+                "nombre_cartel": e.nombre_cartel,
+                "tipo": e.tipo_evaluacion,
+                "calificacion": mejor if mejor is not None else "-",
+            }
+        )
 
     # Ordenar por grado y calificación desc
     datos.sort(
-        key=lambda x: (x["grado"], -(x["calificacion"] if isinstance(x["calificacion"], (int, float)) else -1))
+        key=lambda x: (
+            x["grado"],
+            -(x["calificacion"] if isinstance(x["calificacion"], (int, float)) else -1),
+        )
     )
 
     pdf_path = render_pdf(datos=datos, grado=grado)
@@ -131,34 +156,17 @@ def exportar():
     return send_file(pdf_path, as_attachment=True, download_name="resultados.pdf")
 
 
-# ---------- SETUP PROTEGIDO POR TOKEN ----------
+# ---------- UTIL: TOKEN DE SETUP ----------
 
 def _check_token_or_404():
-    """Valida el token de setup usando ADMIN_SETUP_TOKEN."""
+    """Valida el token de setup usando ADMIN_SETUP_TOKEN (env var)."""
     token = request.args.get("token")
-    expected = current_app.config.get("ADMIN_SETUP_TOKEN")
+    expected = os.getenv("ADMIN_SETUP_TOKEN")
     if not expected or token != expected:
         abort(404)
 
 
-@bp.route("/setup")
-def setup_admin():
-    """Crea el admin en PRODUCCIÓN si no existe (solo con token)."""
-    _check_token_or_404()
-
-    admin = User.query.filter_by(email="admin@institucion.edu").first()
-    if not admin:
-        admin = User(
-            nombre="Admin",
-            email="admin@institucion.edu",
-            role="admin",
-        )
-        admin.set_password("admin123")
-        db.session.add(admin)
-        db.session.commit()
-        return "Admin creado: admin@institucion.edu / admin123"
-    else:
-        return "Admin ya existía."
+# ---------- SETUP ADMIN (CREAR / RESET) ----------
 
 @bp.route("/setup-admin")
 def setup_admin():
@@ -166,27 +174,20 @@ def setup_admin():
     Crea o actualiza la cuenta admin en PRODUCCIÓN.
     Protegido con ADMIN_SETUP_TOKEN (querystring ?token=...).
     """
-    token = request.args.get("token")
-    expected = os.getenv("ADMIN_SETUP_TOKEN")
+    _check_token_or_404()
 
-    if not expected or token != expected:
-        # No revelamos mucho detalle para no regalar el endpoint
-        return "No autorizado", 403
-
-    # Buscar admin por correo
     admin = User.query.filter_by(email="admin@institucion.edu").first()
 
     if not admin:
         admin = User(
             nombre="Admin",
             email="admin@institucion.edu",
-            role="admin"
+            role="admin",
         )
-        admin.set_password("admin123")  # contraseña en producción
+        admin.set_password("admin123")  # contraseña en producción (luego la cambias)
         db.session.add(admin)
         msg = "✔ Admin creado."
     else:
-        # Aseguramos que siga siendo admin y reseteamos password
         admin.role = "admin"
         admin.set_password("admin123")
         msg = "✔ Admin actualizado (password reseteado)."
@@ -194,6 +195,8 @@ def setup_admin():
     db.session.commit()
     return msg, 200
 
+
+# ---------- SEED DE EVENTOS (FLYER EXACTO) ----------
 
 @bp.route("/seed-eventos")
 def seed_eventos():
@@ -281,7 +284,6 @@ def seed_eventos():
         ),
     ]
 
-    # Igual que tu scripts/seed.py: limpiar y recargar EXACTO
     db.session.query(Evento).delete()
     for d in EVENTS:
         db.session.add(Evento(**d))
