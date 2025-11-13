@@ -1,132 +1,21 @@
 # routes/admin.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app
-import os
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, abort
 from flask_login import login_user, logout_user, login_required, current_user
+from datetime import date, time
+
 from forms.login_form import LoginForm
 from models import db
 from models.user import User
 from models.equipo import Equipo
 from models.evaluacion import Evaluacion
+from models.evento import Evento
 from utils.decorators import role_required
 from utils.export_pdf import render_pdf
 
-
-
 bp = Blueprint("admin", __name__)
-from datetime import date, time
-from models.evento import Evento
 
+# ---------- LOGIN / LOGOUT ----------
 
-@bp.route("/init-admin")
-def init_admin():
-    """
-    Inicializa o resetea el usuario admin en la BD actual (Render).
-    PROTEGER con token en query: /admin/init-admin?token=TU_TOKEN
-    """
-    token = request.args.get("token")
-    expected = os.getenv("ADMIN_SETUP_TOKEN")
-
-    if not expected or token != expected:
-        # No revelamos nada, solo 403
-        return "Forbidden", 403
-
-    from models.user import User
-    from models import db
-
-    email = "admin@institucion.edu"
-    password = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123")
-
-    admin = User.query.filter_by(email=email, role="admin").first()
-    if not admin:
-        admin = User(nombre="Admin", email=email, role="admin")
-        admin.set_password(password)
-        db.session.add(admin)
-        msg = "Admin creado"
-    else:
-        admin.set_password(password)
-        msg = "Password de admin actualizada"
-
-    db.session.commit()
-    return f"{msg} correctamente para {email}.", 200
-
-
-@bp.route("/seed-eventos")
-def seed_eventos():
-    """
-    Crea los eventos del programa en la BD actual (Render).
-    Proteger con token: /admin/seed-eventos?token=TU_TOKEN
-    """
-    token = request.args.get("token")
-    expected = os.getenv("ADMIN_SETUP_TOKEN")  # reutilizamos el mismo token del init-admin
-
-    if not expected or token != expected:
-        return "Forbidden", 403
-
-    from models import db
-
-    data = [
-        # OJO: usa exactamente los eventos del flyer
-        {
-            "slug": "apertura-semana-biomedica",
-            "titulo": "Ceremonia de Apertura",
-            "descripcion_corta": "Inicio de actividades y mensaje de bienvenida.",
-            "tipo": "Ceremonia",
-            "ponente_nombre": "Comité Académico",
-            "ponente_afiliacion": "CUCEI",
-            "fecha": date(2025, 11, 18),
-            "hora_inicio": time(9, 0),
-            "hora_fin": time(9, 30),
-            "lugar": "Auditorio Principal",
-            "imagen": None,
-            "published": True,
-        },
-        {
-            "slug": "taller-senales-biomedicas",
-            "titulo": "Taller: Procesamiento de Señales Biomédicas",
-            "descripcion_corta": "Pipeline de filtros, features y visualización.",
-            "tipo": "Taller",
-            "ponente_nombre": "Dra. A. Martínez",
-            "ponente_afiliacion": "Laboratorio de Neuroingeniería",
-            "fecha": date(2025, 11, 18),
-            "hora_inicio": time(10, 0),
-            "hora_fin": time(12, 0),
-            "lugar": "Lab 2",
-            "imagen": None,
-            "published": True,
-        },
-        {
-            "slug": "conferencia-innovacion-protesis",
-            "titulo": "Conferencia: Innovación en Prótesis Inteligentes",
-            "descripcion_corta": "Tendencias en sensores y control.",
-            "tipo": "Conferencia",
-            "ponente_nombre": "M. García",
-            "ponente_afiliacion": "SEVID",
-            "fecha": date(2025, 11, 19),
-            "hora_inicio": time(11, 0),
-            "hora_fin": time(12, 0),
-            "lugar": "Aula Magna",
-            "imagen": None,
-            "published": True,
-        },
-        # Aquí agrega el resto del programa EXACTO del flyer
-        # ...
-    ]
-
-    creados = 0
-    for d in data:
-        existing = Evento.query.filter_by(slug=d["slug"]).first()
-        if existing:
-            continue
-        ev = Evento(**d)
-        db.session.add(ev)
-        creados += 1
-
-    db.session.commit()
-    return f"Eventos sembrados: {creados}", 200
-
-
-
-# -------------------- Auth --------------------
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated and current_user.role == "admin":
@@ -134,8 +23,7 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
-        email = form.email.data.lower().strip()
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter_by(email=form.email.data.lower().strip()).first()
         if user and user.role == "admin" and user.check_password(form.password.data):
             login_user(user)
             return redirect(url_for("admin.dashboard"))
@@ -151,97 +39,218 @@ def logout():
     return redirect(url_for("admin.login"))
 
 
-# -------------------- Dashboard --------------------
+# ---------- DASHBOARD PRINCIPAL ----------
+
 @bp.route("/dashboard")
 @login_required
 @role_required("admin")
 def dashboard():
     grado = request.args.get("grado", type=int)
 
-    # --- Equipos (con filtro opcional) ---
-    equipos_q = Equipo.query
+    query = Equipo.query
     if grado:
-        equipos_q = equipos_q.filter_by(grado=grado)
-    equipos = equipos_q.order_by(Equipo.grado.asc(), Equipo.nombre_cartel.asc()).all()
+        query = query.filter_by(grado=grado)
+    equipos = query.order_by(Equipo.grado.asc(), Equipo.nombre_cartel.asc()).all()
 
-    # --- Usuarios por rol ---
-    academicos = User.query.filter_by(role="academico").order_by(User.nombre.asc()).all()
-    alumnos    = User.query.filter_by(role="alumno").order_by(User.nombre.asc()).all()
+    # Resumen rápido
+    equipos_total = Equipo.query.count()
+    equipos_calificados = Equipo.query.filter_by(estado="Calificado").count()
+    academicos_total = User.query.filter_by(role="academico").count()
+    alumnos_total = User.query.filter_by(role="alumno").count()
 
-    # --- Resumen (contadores rápidos) ---
-    resumen = {
-        "equipos_total": Equipo.query.count(),
-        "equipos_calificados": Equipo.query.filter_by(estado="Calificado").count(),
-        "academicos_total": len(academicos),
-        "alumnos_total": len(alumnos),
-    }
-
-    # --- Exportar habilitado solo si todos los equipos (del filtro) están calificados ---
+    # Habilitar exportar si todos están calificados
     if grado:
         total = Equipo.query.filter_by(grado=grado).count()
-        calif = Equipo.query.filter_by(grado=grado, estado="Calificado").count()
-        puede_exportar = (total > 0 and total == calif)
+        calificados = Equipo.query.filter_by(grado=grado, estado="Calificado").count()
+        puede_exportar = (total > 0 and total == calificados)
     else:
-        total = resumen["equipos_total"]
-        calif = resumen["equipos_calificados"]
-        puede_exportar = (total > 0 and total == calif)
+        total = Equipo.query.count()
+        calificados = Equipo.query.filter_by(estado="Calificado").count()
+        puede_exportar = (total > 0 and total == calificados)
+
+    # Listas para pestañas
+    academicos = User.query.filter_by(role="academico").all()
+    alumnos = User.query.filter_by(role="alumno").all()
+
+    resumen = {
+        "equipos_total": equipos_total,
+        "equipos_calificados": equipos_calificados,
+        "academicos_total": academicos_total,
+        "alumnos_total": alumnos_total,
+    }
 
     return render_template(
         "admin_dashboard.html",
         equipos=equipos,
-        academicos=academicos,
-        alumnos=alumnos,
         grado=grado,
         puede_exportar=puede_exportar,
         resumen=resumen,
+        academicos=academicos,
+        alumnos=alumnos,
     )
 
-# -------------------- Exportación PDF --------------------
+
+# ---------- EXPORTAR PDF ----------
+
 @bp.route("/exportar")
 @login_required
 @role_required("admin")
 def exportar():
     grado = request.args.get("grado", type=int)
 
-    q = db.session.query(
+    query = db.session.query(
         Equipo.id, Equipo.clave_equipo, Equipo.grado, Equipo.nombre_cartel, Equipo.tipo_evaluacion
     )
+
     if grado:
-        q = q.filter(Equipo.grado == grado)
+        query = query.filter(Equipo.grado == grado)
 
-    equipos = q.all()
+    equipos = query.all()
 
-    # Construir filas con "mejor" calificación por equipo (puede ser None)
     datos = []
     for e in equipos:
-        evs = (
-            db.session.query(Evaluacion.calificacion)
-            .filter(Evaluacion.equipo_id == e.id)
-            .all()
-        )
-        # evs es lista de tuplas [(cal,), ...]
-        califs = [row[0] for row in evs if row[0] is not None]
-        mejor = max(califs) if califs else None
-
+        evs = db.session.query(Evaluacion).filter(Evaluacion.equipo_id == e.id).all()
+        mejor = max([ev.calificacion for ev in evs if ev.calificacion is not None], default=None)
         datos.append({
             "grado": e.grado,
             "clave_equipo": e.clave_equipo,
             "nombre_cartel": e.nombre_cartel,
             "tipo": e.tipo_evaluacion,
-            "calificacion": mejor if mejor is not None else "-"  # para la tabla y el PDF
+            "calificacion": mejor if mejor is not None else "-",
         })
 
-    # Orden: por grado asc y dentro por calificación desc (None/"-" al final)
-    def sort_key(d):
-        cal = d["calificacion"]
-        cal_num = float(cal) if isinstance(cal, (int, float)) else (-1.0 if cal == "-" else -1.0)
-        return (d["grado"], -cal_num)
-
-    datos.sort(key=sort_key)
+    # Ordenar por grado y calificación desc
+    datos.sort(
+        key=lambda x: (x["grado"], -(x["calificacion"] if isinstance(x["calificacion"], (int, float)) else -1))
+    )
 
     pdf_path = render_pdf(datos=datos, grado=grado)
     if not pdf_path:
         flash("No fue posible generar el PDF (ver logs).", "error")
         return redirect(url_for("admin.dashboard"))
-
     return send_file(pdf_path, as_attachment=True, download_name="resultados.pdf")
+
+
+# ---------- SETUP PROTEGIDO POR TOKEN ----------
+
+def _check_token_or_404():
+    """Valida el token de setup usando ADMIN_SETUP_TOKEN."""
+    token = request.args.get("token")
+    expected = current_app.config.get("ADMIN_SETUP_TOKEN")
+    if not expected or token != expected:
+        abort(404)
+
+
+@bp.route("/setup")
+def setup_admin():
+    """Crea el admin en PRODUCCIÓN si no existe (solo con token)."""
+    _check_token_or_404()
+
+    admin = User.query.filter_by(email="admin@institucion.edu").first()
+    if not admin:
+        admin = User(
+            nombre="Admin",
+            email="admin@institucion.edu",
+            role="admin",
+        )
+        admin.set_password("admin123")
+        db.session.add(admin)
+        db.session.commit()
+        return "Admin creado: admin@institucion.edu / admin123"
+    else:
+        return "Admin ya existía."
+
+
+@bp.route("/seed-eventos")
+def seed_eventos():
+    """Siembra los eventos EXACTOS del flyer en PRODUCCIÓN (solo con token)."""
+    _check_token_or_404()
+
+    EVENTS = [
+        dict(
+            slug="presentacion-proyectos-1-2",
+            titulo="Presentación de proyectos finales",
+            descripcion_corta="Alumnas y alumnos 1º y 2º",
+            tipo="Presentación",
+            ponente_nombre=None,
+            ponente_afiliacion=None,
+            fecha=date(2025, 11, 28),
+            hora_inicio=time(7, 0),
+            hora_fin=time(10, 0),
+            lugar="CUTLAJO - Edificio E",
+            published=True,
+        ),
+        dict(
+            slug="conferencia-ai-across-scales",
+            titulo='Conferencia “Artificial Intelligence Across Scales”',
+            descripcion_corta="",
+            tipo="Conferencia",
+            ponente_nombre="Mtro. Moisés Sotelo Rodríguez",
+            ponente_afiliacion="BioDev Network",
+            fecha=date(2025, 11, 28),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            lugar="Coworking CUTLAJO",
+            published=True,
+        ),
+        dict(
+            slug="cinco-voces-perspectivas",
+            titulo="Cinco voces, cinco perspectivas, una pasión: Ingeniería Biomédica",
+            descripcion_corta="Alumn@s de últimos semestres",
+            tipo="Foro",
+            ponente_nombre=None,
+            ponente_afiliacion=None,
+            fecha=date(2025, 11, 28),
+            hora_inicio=time(11, 0),
+            hora_fin=time(12, 0),
+            lugar="Coworking CUTLAJO",
+            published=True,
+        ),
+        dict(
+            slug="taller-senales-ml-bradicardias",
+            titulo='Taller “De Señales a Diagnósticos: ML en Bradicardias”',
+            descripcion_corta="Taller práctico de machine learning en bradicardias",
+            tipo="Taller",
+            ponente_nombre=None,
+            ponente_afiliacion=None,
+            fecha=date(2025, 11, 28),
+            hora_inicio=time(10, 0),
+            hora_fin=time(12, 0),
+            lugar="Coworking CUTLAJO",
+            published=True,
+        ),
+        dict(
+            slug="presentacion-modulares-finales",
+            titulo="Presentación de Modulares y Proyectos finales",
+            descripcion_corta="Alumn@s de Ingeniería Biomédica",
+            tipo="Presentación",
+            ponente_nombre=None,
+            ponente_afiliacion=None,
+            fecha=date(2025, 11, 28),
+            hora_inicio=time(12, 0),
+            hora_fin=time(15, 0),
+            lugar="CUTLAJO - Edificio E",
+            published=True,
+        ),
+        dict(
+            slug="pelea-de-sumos",
+            titulo="Pelea de sumos",
+            descripcion_corta="Dentro de la agenda de presentación de proyectos modulares",
+            tipo="Exhibición",
+            ponente_nombre=None,
+            ponente_afiliacion=None,
+            fecha=date(2025, 11, 28),
+            hora_inicio=time(13, 30),
+            hora_fin=time(15, 0),
+            lugar="Coworking CUTLAJO",
+            published=True,
+        ),
+    ]
+
+    # Igual que tu scripts/seed.py: limpiar y recargar EXACTO
+    db.session.query(Evento).delete()
+    for d in EVENTS:
+        db.session.add(Evento(**d))
+    db.session.commit()
+
+    return f"✔ Se cargaron {len(EVENTS)} eventos (flyer exacto) en producción."
