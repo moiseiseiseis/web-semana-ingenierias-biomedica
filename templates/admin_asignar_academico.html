@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Asignar equipos a {{ academico.nombre }}{% endblock %}
+{% block content %}
+
+<h1 class="text-xl font-semibold mb-4">
+  Asignar equipos a {{ academico.nombre }}
+</h1>
+
+<p class="mb-2 text-sm text-gray-600">
+  Correo: <span class="font-mono">{{ academico.email }}</span>
+</p>
+
+<div class="card max-w-xl">
+  <div class="card-pad">
+    <form method="post" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label class="field-label">Claves de equipos (una por línea)</label>
+      <textarea name="claves" rows="6" class="field-input"
+                placeholder="INBI3-04&#10;INBI3-05&#10;INBI3-06"></textarea>
+
+      <p class="text-xs text-gray-500">
+        Solo se asignarán claves que ya existan en el sistema.
+        Los duplicados se ignorarán automáticamente.
+      </p>
+
+      <div class="flex gap-2 mt-2">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-ghost">Cancelar</a>
+        <button class="btn btn-primary">Guardar asignaciones</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

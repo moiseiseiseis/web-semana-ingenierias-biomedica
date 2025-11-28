@@ -22,6 +22,9 @@ from models.evaluacion import Evaluacion
 from models.evento import Evento
 from utils.decorators import role_required
 from utils.export_pdf import render_pdf
+from models.asignacion import Asignacion
+from sqlalchemy import func 
+
 
 bp = Blueprint("admin", __name__)
 
@@ -51,25 +54,24 @@ def logout():
 
 
 # ---------- DASHBOARD PRINCIPAL ----------
-
 @bp.route("/dashboard")
 @login_required
 @role_required("admin")
 def dashboard():
     grado = request.args.get("grado", type=int)
 
+    # ---- equipos (lista principal) ----
     query = Equipo.query
     if grado:
         query = query.filter_by(grado=grado)
     equipos = query.order_by(Equipo.grado.asc(), Equipo.nombre_cartel.asc()).all()
 
-    # Resumen rápido
+    # ---- resumen rápido ----
     equipos_total = Equipo.query.count()
     equipos_calificados = Equipo.query.filter_by(estado="Calificado").count()
     academicos_total = User.query.filter_by(role="academico").count()
     alumnos_total = User.query.filter_by(role="alumno").count()
 
-    # Habilitar exportar si todos están calificados
     if grado:
         total = Equipo.query.filter_by(grado=grado).count()
         calificados = Equipo.query.filter_by(grado=grado, estado="Calificado").count()
@@ -79,9 +81,32 @@ def dashboard():
         calificados = Equipo.query.filter_by(estado="Calificado").count()
         puede_exportar = (total > 0 and total == calificados)
 
-    # Listas para pestañas
+    # ---- listas para pestañas ----
     academicos = User.query.filter_by(role="academico").all()
     alumnos = User.query.filter_by(role="alumno").all()
+
+    # ---- contadores por académico (ASIGNADOS y CALIFICADOS) ----
+    asig_por_academico = {a.id: 0 for a in academicos}
+    calif_por_academico = {a.id: 0 for a in academicos}
+
+    # asignaciones
+    filas_asig = (
+        db.session.query(Asignacion.academico_id, func.count(Asignacion.id))
+        .group_by(Asignacion.academico_id)
+        .all()
+    )
+    for acad_id, n in filas_asig:
+        asig_por_academico[acad_id] = n
+
+    # evaluaciones con calificación no nula
+    filas_calif = (
+        db.session.query(Evaluacion.academico_id, func.count(Evaluacion.id))
+        .filter(Evaluacion.calificacion.isnot(None))
+        .group_by(Evaluacion.academico_id)
+        .all()
+    )
+    for acad_id, n in filas_calif:
+        calif_por_academico[acad_id] = n
 
     resumen = {
         "equipos_total": equipos_total,
@@ -98,6 +123,8 @@ def dashboard():
         resumen=resumen,
         academicos=academicos,
         alumnos=alumnos,
+        asig_por_academico=asig_por_academico,
+        calif_por_academico=calif_por_academico,
     )
 
 
@@ -154,6 +181,65 @@ def exportar():
         flash("No fue posible generar el PDF (ver logs).", "error")
         return redirect(url_for("admin.dashboard"))
     return send_file(pdf_path, as_attachment=True, download_name="resultados.pdf")
+
+# ---------- ASIGNAR EQUIPOS A UN ACADÉMICO (ADMIN) ----------
+
+@bp.route("/asignar-academico/<int:academico_id>", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def asignar_academico(academico_id):
+    # Solo usuarios con rol "academico"
+    academico = User.query.filter_by(id=academico_id, role="academico").first_or_404()
+
+    if request.method == "POST":
+        raw = (request.form.get("claves") or "").strip()
+        if not raw:
+            flash("Pega al menos una clave de equipo.", "error")
+            return redirect(url_for("admin.asignar_academico", academico_id=academico.id))
+
+        claves = [c.strip() for c in raw.splitlines() if c.strip()]
+
+        # Buscar equipos existentes
+        equipos = Equipo.query.filter(Equipo.clave_equipo.in_(claves)).all()
+        encontradas = {e.clave_equipo: e for e in equipos}
+        no_encontradas = [c for c in claves if c not in encontradas]
+
+        nuevas = 0
+        for c in claves:
+            e = encontradas.get(c)
+            if not e:
+                continue
+
+            # evitar duplicados académico–equipo
+            ya = Asignacion.query.filter_by(
+                academico_id=academico.id,
+                equipo_id=e.id
+            ).first()
+
+            if ya:
+                continue
+
+            db.session.add(Asignacion(
+                academico_id=academico.id,
+                equipo_id=e.id
+            ))
+            nuevas += 1
+
+        db.session.commit()
+
+        msg = f"Asignadas {nuevas} clave(s) a {academico.nombre}."
+        if no_encontradas:
+            msg += f" No encontradas: {', '.join(no_encontradas)}."
+        flash(msg, "success" if nuevas else "error")
+
+        return redirect(url_for("admin.dashboard"))
+
+    # GET: mostrar formulario sencillo
+    return render_template(
+        "admin_asignar_academico.html",
+        academico=academico
+    )
+
 
 
 # ---------- UTIL: TOKEN DE SETUP ----------

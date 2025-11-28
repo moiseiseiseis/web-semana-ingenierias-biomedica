@@ -53,14 +53,10 @@
     </form>
 
     <div class="ml-auto">
-      {% if puede_exportar %}
-        <a href="{{ url_for('admin.exportar', grado=grado) }}" class="btn btn-primary !h-10">Exportar PDF</a>
-      {% else %}
-        <button class="btn btn-ghost !h-10 cursor-not-allowed" title="Exportación disponible cuando todos los equipos estén calificados" disabled>
-          Exportar PDF
-        </button>
-      {% endif %}
-    </div>
+  <a href="{{ url_for('admin.exportar', grado=grado) }}" class="btn btn-primary !h-10">
+    Exportar PDF
+  </a>
+</div>
   </div>
 </div>
 
@@ -112,51 +108,74 @@
 </section>
 
 {# ==== TAB: ACADÉMICOS ==== #}
-<a id="tab-academicos"></a>
-<section class="card mb-8">
-  <div class="card-pad !p-6 md:!p-8">
-    <header class="mb-4">
-      <h2 class="text-lg font-semibold">Académicos</h2>
-      <p class="text-sm text-gray-600 mt-1">Resumen de cuentas y avance de evaluaciones.</p>
-    </header>
+<p>ADMINISTRADOR ASIGNA CLAVES DE EQUIPOS A ACADDÉMICOS AQUÍ ABAJO. SELECCIONAR EL BOTÓN DE ASIGNAR CLAVES</p>
+<P></P>
+<div class="overflow-x-auto shadow-sm rounded-lg border">
+  <table class="table w-full text-left border-collapse">
+    
+    <thead class="bg-gray-50 text-gray-600 uppercase text-xs font-semibold">
+      <tr>
+        <th class="p-4 border-b">Nombre</th>
+        <th class="p-4 border-b">Correo</th>
+        <th class="p-4 border-b text-center">Asignados</th>
+        <th class="p-4 border-b text-center">Calificados</th>
+        <th class="p-4 border-b text-center">Acciones</th>
+      </tr>
+    </thead>
 
-    <div class="overflow-auto">
-      <table class="min-w-full text-sm md:text-base table-auto border-collapse">
-        <thead class="bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-          <tr>
-            <th class="px-4 py-3">Nombre</th>
-            <th class="px-4 py-3">Correo</th>
-            <th class="px-4 py-3">Asignados</th>
-            <th class="px-4 py-3">Calificados</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          {% for a in academicos %}
-            {% set asignados = a.asignaciones|length if a.asignaciones is defined else 0 %}
-            {% set califs = 0 %}
-            {% if a.evaluaciones is defined and a.evaluaciones %}
-              {% for ev in a.evaluaciones %}
-                {% if ev.calificacion is not none %}
-                  {% set califs = califs + 1 %}
-                {% endif %}
-              {% endfor %}
-            {% endif %}
-            <tr class="hover:bg-slate-50">
-              <td class="px-4 py-3 font-medium">{{ a.nombre }}</td>
-              <td class="px-4 py-3">{{ a.email }}</td>
-              <td class="px-4 py-3">{{ asignados }}</td>
-              <td class="px-4 py-3">{{ califs }}</td>
-            </tr>
-          {% else %}
-            <tr>
-              <td class="px-4 py-6 text-gray-500 italic" colspan="4">Sin académicos registrados.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
+    <tbody class="text-sm text-gray-700">
+
+      {% for a in academicos %}
+
+        <tr class="hover:bg-gray-50 transition duration-150 border-b last:border-0">
+          
+          <!-- NOMBRE -->
+          <td class="p-4 font-medium text-gray-900">
+            {{ a.nombre }}
+          </td>
+
+          <!-- CORREO -->
+          <td class="p-4 text-gray-500">
+            {{ a.email }}
+          </td>
+
+          <!-- ASIGNADOS (usando diccionario calculado en backend) -->
+          <td class="p-4 text-center">
+            <span class="bg-blue-100 text-blue-800 py-1 px-3 rounded-full text-xs font-bold">
+              {{ asig_por_academico.get(a.id, 0) }}
+            </span>
+          </td>
+
+          <!-- CALIFICADOS (otro diccionario del backend) -->
+          <td class="p-4 text-center">
+            <span class="{{ 'text-green-600 font-bold' if calif_por_academico.get(a.id, 0) > 0 else 'text-gray-400' }}">
+              {{ calif_por_academico.get(a.id, 0) }}
+            </span>
+          </td>
+
+          <!-- BOTÓN ASIGNAR CLAVES -->
+          <td class="p-4 text-center">
+            <a href="{{ url_for('admin.asignar_academico', academico_id=a.id) }}"
+               class="btn btn-sm btn-primary rounded-pill shadow-sm px-3 py-1"
+               style="text-decoration: none;">
+               <i class="fas fa-key"></i> Asignar claves
+            </a>
+          </td>
+
+        </tr>
+
+      {% else %}
+        <tr>
+          <td colspan="5" class="p-8 text-center text-gray-500 italic">
+            No hay académicos registrados en este momento.
+          </td>
+        </tr>
+      {% endfor %}
+
+    </tbody>
+  </table>
+</div>
+
 
 {# ==== TAB: ALUMNOS ==== #}
 <a id="tab-alumnos"></a>

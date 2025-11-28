@@ -15,6 +15,16 @@ ACADEMICO_ALLOWED_DOMAIN = "@academicos.udg.mx"
 
 bp = Blueprint("academicos", __name__)
 
+#rúbricas de evaluación por grado
+
+RUBRIC_URLS = {
+    1: "https://forms.gle/EeWeEwpTNdkE8WA68",
+    3: "https://forms.gle/HWZDPkYpMrziQ85C8",
+    5: "https://forms.gle/9KdxdTMuTfzxiwqB7",
+    7: "https://forms.gle/qsa6n633qXHVrAar9",
+    9: "https://forms.gle/qsa6n633qXHVrAar9",
+}
+
 # ---------- Auth ----------
 @bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -207,7 +217,6 @@ def evaluar(equipo_id):
             ev.calificacion = calificacion
             ev.comentarios = comentarios
 
-        # Solo marcamos "Calificado" si efectivamente tiene calificación
         if calificacion is not None:
             equipo.estado = "Calificado"
 
@@ -215,4 +224,8 @@ def evaluar(equipo_id):
         flash("Evaluación guardada.", "success")
         return redirect(url_for("academicos.dashboard"))
 
-    return render_template("evaluacion_form.html", equipo=equipo, form=form)
+    
+    rubric_url = RUBRIC_URLS.get(equipo.grado)
+
+    return render_template("evaluacion_form.html", equipo=equipo, form=form, rubric_url=rubric_url)
+

@@ -125,12 +125,22 @@ def registro():
             # Vincular miembros por student_code (existan o no)
             raw = [x.strip() for x in (form.integrantes_codigos.data or "").splitlines() if x.strip()]
             for code in raw:
+                # evitar duplicados
+                existe = MiembroEquipo.query.filter_by(
+                    equipo_id=e.id, 
+                    student_code=code
+                ).first()
+
+                if existe:
+                    continue  # ya existe, no lo agregamos
+
                 alumno = User.query.filter_by(student_code=code).first()
                 db.session.add(MiembroEquipo(
                     equipo_id=e.id,
                     alumno_id=alumno.id if alumno else None,
                     student_code=code
                 ))
+
 
             db.session.commit()
             session["registro_ok"] = f"Equipo registrado. Clave: {clave}"

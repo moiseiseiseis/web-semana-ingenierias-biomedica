@@ -1,13 +1,45 @@
 {% extends "base.html" %}
-{% block title %}Evaluar Equipo{% endblock %}
+{% block title %}Evaluar equipo{% endblock %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">Evaluar: {{ equipo.clave_equipo }} — {{ equipo.nombre_cartel }}</h1>
-<form method="post" class="bg-white p-4 rounded shadow max-w-xl">
+<h1 class="text-xl font-semibold mb-4">
+  Evaluar: {{ equipo.clave_equipo }} — {{ equipo.nombre_cartel }}
+</h1>
+
+{% if rubric_url %}
+  <div class="mb-4" style="text-align: center;"> <a href="{{ rubric_url }}" 
+       target="_blank" 
+       rel="noopener" 
+       style="background-color: #0d6efd; color: white; padding: 10px 20px; text-decoration: none; border-radius: 50px; display: inline-block; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+       Abrir rúbrica de {{ equipo.grado }}°
+    </a>
+
+    <p style="color: #6c757d; font-size: 0.85rem; margin-top: 8px;">
+      Se abrirá en otra pestaña. Después regresa aquí para capturar la calificación global.
+    </p>
+  </div>
+{% endif %}
+
+<form method="post" class="grid gap-4 max-w-2xl">
   {{ form.hidden_tag() }}
-  <label class="block mb-2">Calificación (0-100)</label>
-  {{ form.calificacion(class="w-full border rounded p-2 mb-4") }}
-  <label class="block mb-2">Comentarios</label>
-  {{ form.comentarios(class="w-full border rounded p-2 mb-4", rows="4") }}
-  {{ form.submit(class="px-4 py-2 bg-blue-600 text-white rounded") }}
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="field-label">Calificación global (1–100)</label>
+      {{ form.calificacion(class="field-input") }}
+      {% for e in form.calificacion.errors %}
+        <p class="text-xs text-red-600">{{ e }}</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <label class="field-label">Comentarios generales</label>
+    {{ form.comentarios(class="field-input", rows="4") }}
+  </div>
+
+  <div class="flex gap-2">
+    <a href="{{ url_for('academicos.dashboard') }}" class="btn btn-ghost">Cancelar</a>
+    {{ form.submit(class="btn btn-primary") }}
+  </div>
 </form>
 {% endblock %}
