@@ -1,4 +1,4 @@
-# scripts/seed_events_flyer.py
+# scripts/seed.py
 from datetime import date, time
 from app import app
 from models import db

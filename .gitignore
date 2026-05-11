@@ -1,0 +1,13 @@
+# No subir la base local
+instance/
+*.db
+
+# No subir variables secretas
+.env
+
+# No subir caches de Python
+__pycache__/
+*.pyc
+
+# No subir exports temporales
+static/exports/*.pdf
